@@ -32,6 +32,24 @@ public class Day6 extends AoCSolution {
         System.out.println( "Part 1: " + lanternFishSchool.size() );
     }
     
+    class LanternFish {
+        int timer;
+        
+        public LanternFish( int timer ) {
+            this.timer = timer;
+        }
+        
+        public int getTimer() {
+            return timer;
+        }
+        
+        public void decrementTimer() {
+            if (timer-- == 0 ) {
+                timer = 6;
+            }
+        }
+    }
+    
     private void part2() {
         List<LanternFish> lanternFishSchool = Arrays.stream( inputLines.get( 0 ).split( "," ) ).map( timer -> new LanternFish( Integer.parseInt( timer )) ).collect( Collectors.toList() );
         Map<Integer, Long> daysToFishCountMap = new HashMap<>();
@@ -50,20 +68,3 @@ public class Day6 extends AoCSolution {
     }
 }
 
-class LanternFish {
-    int timer;
-    
-    public LanternFish( int timer ) {
-        this.timer = timer;
-    }
-    
-    public int getTimer() {
-        return timer;
-    }
-    
-    public void decrementTimer() {
-        if (timer-- == 0 ) {
-            timer = 6;
-        }
-    }
-}
