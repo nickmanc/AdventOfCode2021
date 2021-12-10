@@ -30,11 +30,9 @@ public class Day9 extends AoCSolution {
     
     private void part2() {
         Grid heightmap = new Grid( inputLines );
-        Iterator<Location> heightmapIterator = heightmap.iterator();
         Set<Location> checkedLocations = new HashSet<>();
         List<Integer> basinSizes = new ArrayList<>();
-        while ( heightmapIterator.hasNext() ) {
-            Location currentLocation = heightmapIterator.next();
+        for (Location currentLocation : heightmap) {
             if ( !checkedLocations.contains( currentLocation ) && currentLocation.height < 9 ) {
                 Set<Location> basin = new HashSet<>();
                 calculateBasin( currentLocation, heightmap, basin );
@@ -58,11 +56,8 @@ public class Day9 extends AoCSolution {
 
 class Grid implements Iterable<Location> {
     private final int gridWidth;
-    
     private final int gridDepth;
-    
     List<Location> gridLocations;
-    
     int currentLocationIndex;
     
     public Grid( List<String> inputLines ) {
@@ -86,49 +81,47 @@ class Grid implements Iterable<Location> {
         return true;
     }
     
-    Location locationAbove( Location location ) {
+    public List<Location> getAdjacentLocations( Location location ) {
+        List<Location> adjacentLocations = new ArrayList<>();
+        addIfExists(locationAbove(location), adjacentLocations);
+        addIfExists(locationBelow(location), adjacentLocations);
+        addIfExists(locationLeft(location), adjacentLocations);
+        addIfExists(locationRight(location), adjacentLocations);
+        return adjacentLocations;
+    }
+    
+    private void addIfExists( Location location, List<Location> locations ) {
+        if (null != location){
+            locations.add( location );
+        }
+    }
+    
+    private Location locationAbove( Location location ) {
         if ( location.y > 0 ) {
             return gridLocations.get( ( ( location.y - 1 ) * gridWidth ) + location.x );
         }
         return null;
     }
     
-    Location locationBelow( Location location ) {
+    private Location locationBelow( Location location ) {
         if ( location.y < gridDepth - 1 ) {
             return gridLocations.get( ( ( location.y + 1 ) * gridWidth ) + location.x );
         }
         return null;
     }
     
-    Location locationLeft( Location location ) {
+    private Location locationLeft( Location location ) {
         if ( location.x > 0 ) {
             return gridLocations.get( ( ( location.y ) * gridWidth ) + location.x - 1 );
         }
         return null;
     }
     
-    Location locationRight( Location location ) {
+    private Location locationRight( Location location ) {
         if ( location.x < gridWidth - 1 ) {
             return gridLocations.get( ( ( location.y ) * gridWidth ) + location.x + 1 );
         }
         return null;
-    }
-    
-    List<Location> getAdjacentLocations( Location location ) {
-        List<Location> adjacentLocations = new ArrayList<>();
-        if ( null != locationAbove( location ) ) {
-            adjacentLocations.add( locationAbove( location ) );
-        }
-        if ( null != locationBelow( location ) ) {
-            adjacentLocations.add( locationBelow( location ) );
-        }
-        if ( null != locationLeft( location ) ) {
-            adjacentLocations.add( locationLeft( location ) );
-        }
-        if ( null != locationRight( location ) ) {
-            adjacentLocations.add( locationRight( location ) );
-        }
-        return adjacentLocations;
     }
     
     @Override
