@@ -21,26 +21,22 @@ public class Day15 extends AoCSolution {
     
     private void part1() {
         long startTime = System.nanoTime();
-        System.out.println( "Part 1: " + solve() + ", in " + TimeUnit.MILLISECONDS.convert(System.nanoTime()-startTime, TimeUnit.NANOSECONDS) + " ms");
+        System.out.println( "Part 1: " + solve(1) + ", in " + TimeUnit.MILLISECONDS.convert( System.nanoTime() - startTime, TimeUnit.NANOSECONDS ) + " ms" );
     }
     
     private void part2() {
         long startTime = System.nanoTime();
-        System.out.println( "Part 2: " + solve(5) + ", in " + TimeUnit.MILLISECONDS.convert(System.nanoTime()-startTime, TimeUnit.NANOSECONDS) + " ms");
+        System.out.println( "Part 2: " + solve( 5 ) + ", in " + TimeUnit.MILLISECONDS.convert( System.nanoTime() - startTime, TimeUnit.NANOSECONDS ) + " ms" );
     }
     
-    private int solve() {
-        return solve(1);
-    }
-    
-    private int solve(int gridScaleFactor) {
+    private int solve( int gridScaleFactor ) {
         Grid grid = new Grid( inputLines, gridScaleFactor );
         Position startPosition = grid.topLeft();
         Position endPosition = grid.bottomRight();
         startPosition.lowestTotalRiskLevel = 0;
         Queue<Position> uncheckedPositions = new PriorityQueue<>();
         uncheckedPositions.add( startPosition );
-        while ( !uncheckedPositions.isEmpty()) {
+        while ( !uncheckedPositions.isEmpty() ) {
             calculateRoute( uncheckedPositions.poll(), uncheckedPositions );
         }
         return endPosition.lowestTotalRiskLevel;
@@ -50,7 +46,7 @@ public class Day15 extends AoCSolution {
         for ( Position neighbour : position.neighbours ) {
             if ( neighbour.riskLevel + position.lowestTotalRiskLevel < neighbour.lowestTotalRiskLevel ) {
                 neighbour.lowestTotalRiskLevel = position.lowestTotalRiskLevel + neighbour.riskLevel;
-                uncheckedPositions.remove(neighbour);//have to remove and add to get in the correct position
+                uncheckedPositions.remove( neighbour );//have to remove and add to get in the correct position
                 uncheckedPositions.add( neighbour );
             }
         }
@@ -58,14 +54,9 @@ public class Day15 extends AoCSolution {
     
     class Grid implements Iterable<Position> {
         private final int gridWidth;
-        
         private final int gridDepth;
-        
         List<Position> positions;
-        
         int currentPositionIndex;
-        
-        int[][] grid;
         
         public Grid( List<String> inputLines, int scaleFactor ) {
             positions = new ArrayList<>();
@@ -73,13 +64,12 @@ public class Day15 extends AoCSolution {
             int inputDepth = inputLines.size();
             gridWidth = inputWidth * scaleFactor;
             gridDepth = inputDepth * scaleFactor;
-            grid = new int[gridWidth][gridDepth];
-                for ( int xScale = 0; xScale < scaleFactor; xScale++ ) {
-                    for ( int gridY = 0; gridY < inputDepth; gridY++ ) {
-                        for ( int yScale = 0; yScale < scaleFactor; yScale++ ) {
-                            for ( int gridX = 0; gridX < inputWidth; gridX++ ) {
-                            positions.add( new Position( gridX + ( inputWidth * xScale ),gridY + ( inputDepth * yScale ), applyScale( Integer.parseInt( inputLines.get( gridY ).charAt( gridX ) + "" ), xScale + yScale ) ) );
-                         }
+            for ( int xScale = 0; xScale < scaleFactor; xScale++ ) {
+                for ( int gridY = 0; gridY < inputDepth; gridY++ ) {
+                    for ( int yScale = 0; yScale < scaleFactor; yScale++ ) {
+                        for ( int gridX = 0; gridX < inputWidth; gridX++ ) {
+                            positions.add( new Position( gridX + ( inputWidth * xScale ), gridY + ( inputDepth * yScale ), applyScale( Integer.parseInt( inputLines.get( gridY ).charAt( gridX ) + "" ), xScale + yScale ) ) );
+                        }
                     }
                 }
             }
@@ -90,11 +80,11 @@ public class Day15 extends AoCSolution {
         }
         
         private int applyScale( int riskFactor, int scaleFactor ) {
-            int newRiskFactor =  riskFactor +  scaleFactor;
-            if (newRiskFactor >= 10) {
+            int newRiskFactor = riskFactor + scaleFactor;
+            if ( newRiskFactor >= 10 ) {
                 newRiskFactor++;
             }
-            return newRiskFactor%10;
+            return newRiskFactor % 10;
         }
         
         public Set<Position> getAdjacentPositions( Position position ) {
@@ -166,7 +156,7 @@ public class Day15 extends AoCSolution {
             }
             System.out.println();
         }
-    
+        
         public Position topLeft() {
             return positions.get( 0 );
         }
@@ -175,55 +165,50 @@ public class Day15 extends AoCSolution {
             return positions.get( positions.size() - 1 );
         }
     }
+}
+
+class Position implements Comparable<Position> {
+    int x;
+    int y;
+    int riskLevel;
+    int lowestTotalRiskLevel = Integer.MAX_VALUE;
+    Set<Position> neighbours;
     
-    class Position implements Comparable {
-        int x;
-        
-        int y;
-        
-        int riskLevel;
-        
-        int lowestTotalRiskLevel = Integer.MAX_VALUE;
-        
-        Set<Position> neighbours;
-        
-        public Position( int x, int y, int riskLevel ) {
-            this.x = x;
-            this.y = y;
-            this.riskLevel = riskLevel;
-            neighbours = new HashSet<>();
-        }
-        
-        @Override
-        public String toString() {
-            return "Position{" + "x=" + x + ", y=" + y + ", riskLevel=" + riskLevel + '}';
-        }
-        
-        @Override
-        public boolean equals( Object o ) {
-            if ( this == o ) {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() ) {
-                return false;
-            }
-            Position position = (Position) o;
-            return x == position.x && y == position.y;
-        }
-        
-        @Override
-        public int hashCode() {
-            return Objects.hash( x, y );
-        }
-        
-        public void setNeighbours( Set<Position> adjacentPositions ) {
-            neighbours = adjacentPositions;
-        }
+    public Position( int x, int y, int riskLevel ) {
+        this.x = x;
+        this.y = y;
+        this.riskLevel = riskLevel;
+        neighbours = new HashSet<>();
+    }
     
-        @Override
-        public int compareTo( Object o ) {
-            Position other = (Position) o;
-            return  this.lowestTotalRiskLevel - other.lowestTotalRiskLevel ;
+    @Override
+    public String toString() {
+        return "Position{" + "x=" + x + ", y=" + y + ", riskLevel=" + riskLevel + '}';
+    }
+    
+    @Override
+    public boolean equals( Object o ) {
+        if ( this == o ) {
+            return true;
         }
+        if ( o == null || getClass() != o.getClass() ) {
+            return false;
+        }
+        Position position = (Position) o;
+        return x == position.x && y == position.y;
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash( x, y );
+    }
+    
+    public void setNeighbours( Set<Position> adjacentPositions ) {
+        neighbours = adjacentPositions;
+    }
+    
+    @Override
+    public int compareTo( Position other ) {
+        return this.lowestTotalRiskLevel - other.lowestTotalRiskLevel;
     }
 }
