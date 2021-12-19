@@ -1,206 +1,144 @@
 package com.hotmail.nickcooke.aoc2021;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class Day16 extends AoCSolution {
     
     public static final int LITERAL_TYPE = 4;
-    
-    public static final int LITERAL_CONTENT_START_CHARACTER = 6;
-    
     public static final int LITERAL_CONTENT_BLOCK_SIZE = 5;
+    public static final int VERSION_BIT_LENGTH = 3;
+    public static final int TYPE_BIT_LENGTH = 3;
+    public static final int LENGTH_TYPE_BIT_LENGTH = 1;
+    public static final int SUBPACKET_COUNT_BIT_LENGTH = 11;
+    public static final int SUBPACKET_LENGTH_BIT_LENGTH = 15;
+    int pointer = 0;
     
     public static void main( String[] args ) {
         Day16 day16 = new Day16();
         day16.getInput();
         day16.part1();
-        //        day15.part2();
+        day16 = new Day16();
+        day16.getInput();
+        day16.part2();
     }
     
-    private void part1() {
-        String input = inputLines.get(0);
-        String inputInBits = getPacketInBits( input );
-        System.out.println("Part 1: " + getVersionSum( inputInBits));
-    }
-    
-    protected static String getPacketInBits( String packetString ) {
-        String result =  packetString.chars().mapToObj( c -> toPaddedBit( (char) c ) ).collect( Collectors.joining() );
+    protected int part1() {
+        int result = parsePacket( getPacketInBits( inputLines.get( 0 ) ) ).sumOfVersionNumbers();
+        System.out.println( "Part 1: " + result );
         return result;
     }
     
-    private static String toPaddedBit( char c ) {
+    protected long part2() {
+        long result = parsePacket( getPacketInBits( inputLines.get( 0 ) ) ).getValue();
+        System.out.println( "Part 2: " + result );
+        return result;
+    }
+    
+    protected String getPacketInBits( String packetString ) {
+        return packetString.chars().mapToObj( c -> toPaddedBit( (char) c ) ).collect( Collectors.joining() );
+    }
+    
+    private String toPaddedBit( char c ) {
         return String.format( "%4s", Long.toBinaryString( Long.parseLong( c + "", 16 ) ) ).replace( " ", "0" );
     }
     
-    public long sumVersionNumbers( List<Packet> packets ) {
-        return packets.stream().mapToInt( p -> p.getVersion() ).sum();
-    }
-    
-    public long getVersionSum(String bitsString){
-        List<Packet> packets = parsePackets( bitsString );
-        return sumVersionNumbers(packets);
-    }
-    
-    public List<Packet> parsePackets( String bitsString ) {
-        List<Packet> packets = new ArrayList<>();
-        StringBuilder bits  = new StringBuilder(bitsString);
-        return parsePackets( bits,packets );
-    }
-    public List<Packet> parsePackets( StringBuilder bits, List<Packet> packets ) {
-        while (bits.length() > 11) {//smallest value for a literal is length 11
-            int version = Integer.parseInt( bits.substring( 0, 3 ), 2 );
-            int type = Integer.parseInt( bits.substring( 3, 6 ), 2 );
-            if ( type == LITERAL_TYPE ) {
-                extractLiteral( bits, packets );
+    public Packet parsePacket( String bitString ) {
+        Packet packet;
+        int version = getInteger( bitString, VERSION_BIT_LENGTH );
+        int type = getInteger( bitString, TYPE_BIT_LENGTH );
+        if ( type == LITERAL_TYPE ) {
+            packet = extractLiteral( version, bitString );
+        }
+        else {
+            int operatorLengthTypeId = getInteger( bitString, LENGTH_TYPE_BIT_LENGTH );
+            packet = new OperatorPacket( version, type );
+            if ( operatorLengthTypeId == 1 ) {//has defined number of subpackets
+                int numberOfSubPackets = getInteger( bitString, SUBPACKET_COUNT_BIT_LENGTH );
+                int subPacketsAdded = 0;
+                while ( subPacketsAdded++ < numberOfSubPackets ) {
+                    packet.subPackets.add( parsePacket( bitString ) );
+                }
             }
-            else {
-                int operatorLengthTypeId = Integer.parseInt( bits.substring( 6, 7 ), 2 );
-                OperatorPacket operatorPacket;
-                if (operatorLengthTypeId == 1){//has defined number of subpackets
-                    operatorPacket = new OperatorPacketLengthType1( bits.toString()  );
-                    packets.add( operatorPacket );
-                    bits.delete( 0,18 );
+            else {//has defined subpacket length
+                int subPacketLength = getInteger( bitString, SUBPACKET_LENGTH_BIT_LENGTH );
+                int target = pointer + subPacketLength;
+                while ( pointer < target ) {
+                    packet.subPackets.add( parsePacket( bitString ) );
                 }
-                else {
-                    operatorPacket = new OperatorPacketLengthType0( bits.toString()  );
-                    packets.add( operatorPacket );
-                    bits.delete( 0,22 );
-                }
-                parsePackets(bits, packets);
-                operatorPacket.subPackets = new ArrayList<>(packets);
-                
             }
         }
-        return packets;
+        return packet;
     }
     
-    private void extractLiteral( StringBuilder bits, List<Packet> packets ) {
-        String content = "";
-        for ( int i = LITERAL_CONTENT_START_CHARACTER; i < bits.length(); i += LITERAL_CONTENT_BLOCK_SIZE ) {
-            content += bits.substring( i + 1, i + LITERAL_CONTENT_BLOCK_SIZE );
-            if ( bits.substring( i, i + 1 ).equals( "0" ) ) {
-                packets.add( new LiteralPacket( bits.substring( 0, i + LITERAL_CONTENT_BLOCK_SIZE ) ) );
-                bits.delete( 0, i + LITERAL_CONTENT_BLOCK_SIZE);
-                break;
-            }
+    private int getInteger( String bits, int intLength ) {
+        return Integer.parseInt( bits.substring( pointer, pointer += intLength ), 2 );
+    }
+    
+    private Packet extractLiteral( int version, String bitString ) {
+        StringBuilder content = new StringBuilder();
+        while ( bitString.charAt( pointer ) != '0' ) {
+            content.append( bitString, pointer + 1, pointer + LITERAL_CONTENT_BLOCK_SIZE );
+            pointer += LITERAL_CONTENT_BLOCK_SIZE;
         }
+        content.append( bitString, pointer + 1, pointer + LITERAL_CONTENT_BLOCK_SIZE );
+        pointer += LITERAL_CONTENT_BLOCK_SIZE;
+        return new LiteralPacket( version, content.toString() );
     }
 }
 
 class Packet {
-    String packetInBits;
-    
     int version;
-    
     int type;
-    
-    public int getVersion() {
-        return this.version;
-    }
-    
-    Packet( String packetInBits ) {
-        this.packetInBits = packetInBits;
-        version = Integer.parseInt( packetInBits.substring( 0, 3 ), 2 );
-        type = Integer.parseInt( packetInBits.substring( 3, 6 ), 2 );
-    }
-    
-    @Override
-    public String toString() {
-        return "Packet{" + "version=" + version + ", type=" + type + '}';
-    }
-    
-    public boolean isOperator() {
-        return type != 4;
-    }
-    
-    public long getValue(){return -1L;};
-}
-
-class LiteralPacket extends Packet {
     long value;
+    List<Packet> subPackets = new LinkedList<>();
     
-    LiteralPacket( String packetInBits ) {
-        super( packetInBits );
-        value = getValue( packetInBits.substring( 6 ) );
-    }
-    
-    private long getValue( String valueString ) {
-        String decodedValueString = "";
-        for ( int i = 0; i < valueString.length(); i += 5 ) {
-            decodedValueString += valueString.substring( i + 1, i + 5 );
-            if ( valueString.substring( i, i + 1 ).equals( "0" ) ) {
-                break;
-            }
-        }
-        return Long.parseLong( decodedValueString, 2 );
+    Packet( int version, int type ) {
+        this.version = version;
+        this.type = type;
     }
     
     public long getValue() {
         return this.value;
     }
     
-    @Override
-    public String toString() {
-        return "LiteralPacket{" + "version=" + version + ", type=" + type + ", value=" + value + '}';
+    public int sumOfVersionNumbers() {
+        return this.version + subPackets.stream().mapToInt( Packet::sumOfVersionNumbers ).sum();
+    }
+}
+
+class LiteralPacket extends Packet {
+    LiteralPacket( int version, String content ) {
+        super( version, 4 );
+        this.value = Long.parseLong( content, 2 );
     }
 }
 
 class OperatorPacket extends Packet {
-    int lengthTypeId;
-    List<Packet> subPackets;
-    
-    OperatorPacket( String packetInBits ) {
-        super( packetInBits );
-        lengthTypeId = Integer.parseInt( packetInBits.substring( 6, 7 ), 2 );
-    }
-    
-    @Override
-    public String toString() {
-        return "OperatorPacket{" + "version=" + version + ", type=" + type + ", lengthTypeId=" + lengthTypeId + '}';
-    }
-    
-    public boolean isType0() {
-        return lengthTypeId == 0;
+    OperatorPacket( int version, int type ) {
+        super( version, type );
     }
     
     @Override
     public long getValue() {
-        return super.getValue();
-    }
-}
-
-class OperatorPacketLengthType0 extends OperatorPacket {
-    int lengthInBits;
-    
-    String subPackets;
-    
-    OperatorPacketLengthType0( String packetInBits ) {
-        super( packetInBits );
-        lengthInBits = Integer.parseInt( packetInBits.substring( 7, 22 ), 2 );
-        subPackets = packetInBits.substring( 22 );
-    }
-    
-    @Override
-    public String toString() {
-        return "OperatorPacketLengthType0{" + "version=" + version + ", type=" + type + ", lengthTypeId=" + lengthTypeId + ", lengthInBits=" + lengthInBits + ", subPackets='" + subPackets + '\'' + '}';
-    }
-}
-
-class OperatorPacketLengthType1 extends OperatorPacket {
-    int numberOfSubOperations;
-    
-    String subPackets;
-    
-    OperatorPacketLengthType1( String packetInBits ) {
-        super( packetInBits );
-        numberOfSubOperations = Integer.parseInt( packetInBits.substring( 7, 18 ), 2 );
-        subPackets = packetInBits.substring( 18 );
-    }
-    
-    @Override
-    public String toString() {
-        return "OperatorPacketLengthType1{" + "version=" + version + ", type=" + type + ", lengthTypeId=" + lengthTypeId + ", numberOfSubPackets=" + numberOfSubOperations + ", subPackets='" + subPackets + '\'' + '}';
+        switch ( type ) {
+            case 0:
+                return subPackets.stream().mapToLong( Packet::getValue ).sum();
+            case 1:
+                return subPackets.stream().mapToLong( Packet::getValue ).reduce( 1, ( a, b ) -> a * b );
+            case 2:
+                return subPackets.stream().mapToLong( Packet::getValue ).reduce( Long.MAX_VALUE, Math::min );
+            case 3:
+                return subPackets.stream().mapToLong( Packet::getValue ).reduce( Long.MIN_VALUE, Math::max );
+            case 5:
+                return subPackets.get( 0 ).getValue() > subPackets.get( 1 ).getValue() ? 1 : 0;
+            case 6:
+                return subPackets.get( 0 ).getValue() < subPackets.get( 1 ).getValue() ? 1 : 0;
+            case 7:
+                return subPackets.get( 0 ).getValue() == subPackets.get( 1 ).getValue() ? 1 : 0;
+            default:
+                throw new RuntimeException( "Invalid operation type: " + type );
+        }
     }
 }
