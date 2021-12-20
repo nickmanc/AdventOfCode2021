@@ -1,6 +1,6 @@
 package com.hotmail.nickcooke.aoc2021;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -92,7 +92,7 @@ class Packet {
     int version;
     int type;
     long value;
-    List<Packet> subPackets = new LinkedList<>();
+    List<Packet> subPackets = new ArrayList<>();
     
     Packet( int version, int type ) {
         this.version = version;
