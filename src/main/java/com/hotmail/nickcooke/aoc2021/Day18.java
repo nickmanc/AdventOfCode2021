@@ -1,38 +1,55 @@
 package com.hotmail.nickcooke.aoc2021;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Stack;
 
 public class Day18 extends AoCSolution {
     
-    List<SFN> snailfishNumberList = new ArrayList<>();
-    
     public static void main( String[] args ) {
-        Day21 day18 = new Day21();
+        Day18 day18 = new Day18();
         day18.getInput();
         day18.part1();
         day18.part2();
     }
     
     protected void part1() {
+        SFN result = null;
+        for ( String input : inputLines ) {
+            if ( null == result ) {
+                result = new SFN( input );
+            }
+            else {
+                result = result.add( new SFN( input ) );
+            }
+        }
+        System.out.println( "Part 1: " + result.magnitude() );
     }
     
     protected void part2() {
-    }
-    
-    protected SFN add( SFN left, SFN right ) {
-        SFN combined = new SFN( left, right );
-        left.parent = combined;
-        right.parent = combined;
-        combined.reduce();
-        return combined;
+        Set<SFN> snailFishNumbers = new HashSet<>();
+        for ( String input : inputLines ) {
+            snailFishNumbers.add( new SFN( input ) );
+        }
+        int maxMagnitude = Integer.MIN_VALUE;
+        for ( SFN sfn : snailFishNumbers ) {
+            for ( SFN otherSfn : snailFishNumbers ) {
+                if ( sfn != otherSfn ) {
+                    SFN copy = new SFN( sfn.toString() ).add( new SFN( otherSfn.toString() ) );
+                    maxMagnitude = Math.max( maxMagnitude, copy.magnitude() );
+                }
+            }
+        }
+        System.out.println( "Part 2: " + maxMagnitude );
     }
 }
 
 class SFN {
     SFN left;
     SFN right;
+    
     SFN parent;
+    
     int value = -1;
     
     public SFN( int value ) {
@@ -46,26 +63,84 @@ class SFN {
         right.parent = this;
     }
     
-    private SFN getRoot(){
-        SFN potentialRoot = this;
-        while (null != potentialRoot.parent){
-            potentialRoot = potentialRoot.parent;
-        }
-        return potentialRoot;
-    }
-    
-    private List<SFN> getAllRegularNumbers() {
-        if (isRegularNumber()){
-            List<SFN> result = new ArrayList<>();
-            result.add( this );
-            return result ;
+    public SFN( String sfnString ) {
+        if ( isDigit( sfnString ) ) {
+            this.value = Integer.parseInt( sfnString );
         }
         else {
-            List<SFN> result = new ArrayList<>();
-            result.addAll( left.getAllRegularNumbers() );
-            result.addAll( right.getAllRegularNumbers() );
-            return result;
+            Stack<SFN> sfnStack = new Stack<>();
+            for ( int i = 0; i < sfnString.length(); i++ ) {
+                char currentChar = sfnString.charAt( i );
+                if ( currentChar == '[' ) {
+                    SFN sfn;
+                    if ( sfnStack.isEmpty() ) {
+                        sfn = this;
+                        sfn.parent = null;
+                    }
+                    else {
+                        sfn = new SFN();
+                        sfn.parent = sfnStack.peek();
+                    }
+                    sfnStack.push( sfn );
+                }
+                else if ( isDigit( currentChar + "" ) ) {
+                    String digit = currentChar + "";
+                    while ( isDigit( sfnString.charAt( i + 1 ) + "" ) ) {
+                        digit += sfnString.charAt( ++i );
+                    }
+                    SFN newSFN = sfnStack.peek();
+                    if ( null == newSFN.left ) {
+                        newSFN.left = new SFN( digit );
+                        newSFN.left.parent = newSFN;
+                    }
+                    else {
+                        newSFN.right = new SFN( digit );
+                        newSFN.right.parent = newSFN;
+                    }
+                }
+                else if ( currentChar == ']' ) {
+                    SFN currentSFN = sfnStack.pop();
+                    if ( !sfnStack.isEmpty() ) {
+                        if ( null == currentSFN.parent.left ) {
+                            currentSFN.parent.left = currentSFN;
+                        }
+                        else {
+                            currentSFN.parent.right = currentSFN;
+                        }
+                    }
+                }
+            }
         }
+    }
+    
+    public SFN() {
+    
+    }
+    
+    public SFN add( SFN right ) {
+        SFN combined = new SFN( this, right );
+        combined.reduce();
+        return combined;
+    }
+    
+    public int magnitude() {
+        if ( value != -1 ) {
+            return value;
+        }
+        else {
+            return ( 3 * left.magnitude() + 2 * right.magnitude() );
+        }
+    }
+    
+    private boolean isDigit( String sfnString ) {
+        try {
+            Integer.parseInt( sfnString );
+            return true;
+        }
+        catch ( NumberFormatException cfe ) {
+        
+        }
+        return false;
     }
     
     public int getParentCount() {
@@ -86,96 +161,93 @@ class SFN {
     }
     
     public void reduce() {
-        explode();
+        while ( explode() || split() );
     }
     
-    
-    private boolean split() {
-        return false;
+    protected boolean split() {
+        if ( value != -1 ) {
+            if ( value > 9 ) {
+                left = new SFN( value / 2 );
+                right = new SFN( ( value + 1 ) / 2 );
+                left.parent = this;
+                right.parent = this;
+                value = -1;
+                return true;
+            }
+            return false;
+        }
+        return left.split() || right.split();
     }
     
-    private boolean explode() {
+    protected boolean explode() {
         if ( value == -1 ) {
             int parentCount = getParentCount();
-            if ( parentCount == 4 ) {
-                SFN parentToReplace = this.parent;
-                SFN pair = this.parent;
-                System.out.println( "Exploding: " + wholeNumberToString() );
-                SFN root = getRoot();
-                List<SFN> allDigits = root.getAllRegularNumbers();
-                if (allDigits.indexOf(  this.left ) > 0 ) {
-                    allDigits.get( allDigits.indexOf( this.left ) - 1 ).value += left.value;
+            if ( parentCount >= 4 ) {
+                if ( isLeft() ) {
+                    if ( parent.right.value == -1 ) {
+                        parent.right.left.value += right.value;
+                    }
+                    else {
+                        parent.right.value += right.value;
+                    }
+                    SFN leftSFN = getLeftSFN();
+                    if ( null != leftSFN ) {
+                        leftSFN.value += this.left.value;
+                    }
+                    this.value = 0;
+                    this.left = null;
+                    this.right = null;
                 }
-                if (allDigits.indexOf(  this.right ) < allDigits.size() -1) {
-                    allDigits.get( allDigits.indexOf( this.right ) + 1 ).value += right.value;
+                else {
+                    if ( parent.left.value == -1 ) {
+                        parent.left.right.value += left.value;
+                    }
+                    else {
+                        parent.left.value += left.value;
+                    }
+                    SFN rightSFN = getRightSFN();
+                    if ( null != rightSFN ) {
+                        rightSFN.value += this.right.value;
+                    }
+                    this.value = 0;
+                    this.left = null;
+                    this.right = null;
                 }
-                this.left = null;
-                this.right = null;
-                this.value=0;
-                
-//                if ( this.isLeft() ) {
-//                    parentToReplace.left.value = 0;
-//                    parentToReplace.right.value += right.value;
-//
-//                    while ( pair.isNested() && isLeft() ) {
-//                        pair = pair.parent;
-//                    }
-//                    if ( pair.left.isRegularNumber() ) {
-//                        pair.left.value += left.value;
-//                    }
-//                    else {
-//                        while ( !pair.right.isRegularNumber() ) {
-//                            pair = pair.right;
-//                        }
-//                        if ( isRight() ) {
-//                            pair.left.value += left.value;
-//                        }
-//                    }
-//                }
-//                else {
-//                    parentToReplace.right.value = 0;
-//                    parentToReplace.left.value += left.value;
-//
-//                    while ( pair.isNested() && isRight() ) {
-//                        pair = pair.parent;
-//                    }
-//                    if ( pair.right.isRegularNumber() ) {
-//                        pair.right.value += right.value;
-//                    }
-//                    else {
-//                        while ( !pair.left.isRegularNumber() ) {
-//                            pair = pair.left;
-//                        }
-//                        if ( isLeft() ) {
-//                            pair.right.value += right.value;
-//                        }
-//                    }
-//                }
-//                SFN replacement = new SFN( 0 );
-//                this.left.parent = replacement;
-//                this.right.parent = replacement;
-//                replacement.parent = parentToReplace.parent;
                 return true;
             }
             else {
-                left.explode();
-                right.explode();
+                return left.explode() || right.explode();
             }
         }
         return false;
     }
     
-    
-    private boolean isRegularNumber() {
-        return value != -1;
+    private SFN getRightSFN() {
+        if ( null != parent ) {
+            if ( isRight() ) {//traverse up the tree as long as it's a right
+                return parent.getRightSFN();
+            }
+            SFN rightCandidate = parent.right;
+            while ( rightCandidate.left != null ) {//traverse down the tree to get the rightmost left ?!
+                rightCandidate = rightCandidate.left;
+            }
+            return rightCandidate;
+        }
+        return null;
     }
     
-    private String wholeNumberToString() {
-        SFN parent = this.parent;
-        while ( parent.isNested() ) {
-            parent = parent.parent;
+    private SFN getLeftSFN() {
+        if ( null != parent ) {
+            if ( isLeft() ) {//traverse up the tree as long as it's a left
+                return parent.getLeftSFN();
+            }
+            SFN leftCandidate = parent.left;
+            while ( leftCandidate.right != null ) {//traverse down the tree to get the rightmost left ?!
+                leftCandidate = leftCandidate.right;
+            }
+            return leftCandidate;
         }
-        return parent.toString();
+        return null;
     }
     
     private boolean isLeft() {
@@ -184,9 +256,5 @@ class SFN {
     
     private boolean isRight() {
         return this.equals( parent.right );
-    }
-    
-    private boolean isNested() {
-        return !( null == parent );
     }
 }

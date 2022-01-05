@@ -2,9 +2,11 @@ plugins {
     id 'application'
     id 'java'
 }
-group 'org.example'
+group 'com.hotmail.nickcooke'
 version '1.0-SNAPSHOT'
-
+application {
+    mainClass = 'com.hotmail.nickcooke.aoc2021.Day21'
+}
 repositories {
     mavenCentral()
 }
