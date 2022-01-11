@@ -5,7 +5,13 @@ plugins {
 group 'com.hotmail.nickcooke'
 version '1.0-SNAPSHOT'
 application {
-    mainClass = 'com.hotmail.nickcooke.aoc2021.Day21'
+//    mainClass = 'com.hotmail.nickcooke.aoc2021.Day19_HELP'
+    mainClass = 'com.hotmail.nickcooke.aoc2021.Day19'
+}
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
 }
 repositories {
     mavenCentral()
